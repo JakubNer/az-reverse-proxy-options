@@ -5,6 +5,7 @@
       "type": "httpTrigger",
       "direction": "in",
       "name": "req",
+      "route": "forward/{*segments}",
       "methods": [
         "get",
         "post"

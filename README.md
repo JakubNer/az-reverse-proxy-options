@@ -59,14 +59,14 @@ Our demonstration of a request payload transform is to take the passed in `text/
 Our demo request will be a `POST` with a JWT that has a `name` property and a payload body of `The cake is a lie!`.
 
 ```
-curl -X POST -H "Content-Type: text/plain" -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c" --data  "The cake is a lie!" http://localhost:7071/api/jwt-terminate
+curl -X POST -H "Content-Type: text/plain" -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c" --data  "The cake is a lie!" https://...
 ```
+
+
 
 This request will be transformed and be handled by our business-logic in our service.  I did not write a service for this demo.  We just use an echo from https://httpbin.org/anything.  The response will be whatever we pass into https://httpbin.org/anything.  Our expectation is to see the `X-Identity-Id` header with the value `John Doe` &mdash; which is the `name` attribute value in the bearer token above.  Our expectation is to see the original payload be reversed into `!eil a si ekac ehT`.
 
-The `http://localhost:7071/api/jwt-terminate` in the `curl` command is targeting a local run of one of the transformations as an Azure Function.  For the actual demo we target a sample Azure Front Door URL &mdash; which will be redacted.  
-
->  Stand up your own demo using this write-up as a prescription and try it out.  My actual demo is not available to the general public.
+The `https://...` in the above `curl` command stands in for your Azure Front Door hostname &mdash; replace this with your Azure Front Door hostname.
 
 
 
@@ -77,6 +77,21 @@ The code samples for this write-up live at https://github.com/JakubNer/az-revers
 All transformations are coded within Azure Functions for ease and simplicity.  
 
 > It's very simple to run the samples on your local computer but that's out of scope for this write-up.  Use Visual Studio Code with Azure Functions extension or your command line.
+
+We can target local runs of one of the Azure Functions with:
+
+```
+# target jwt-terminate which is used by our Azure API Management
+curl -X POST -H "Content-Type: text/plain" -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c" --data  "The cake is a lie!" http://localhost:7071/api/jwt-terminate
+
+# target rewrite-body which is used by our Azure API Management
+curl -X POST -H "Content-Type: text/plain" -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c" --data  "The cake is a lie!" http://localhost:7071/api/rewrite-body
+
+# target our codified forwarder (sans API Management)
+curl -X POST -H "Content-Type: text/plain" -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c" --data  "The cake is a lie!" http://localhost:7071/api/forward/foo/bar
+```
+
+
 
 
 
