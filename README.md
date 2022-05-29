@@ -34,6 +34,8 @@ Although I do provide screenshots from the Azure Portal as to the relevant confi
 
 In this write-up we do consider custom JWT termination as well as a custom request body transformation &mdash; both of which require coding.  We explore where this code is hooked-in, in relation to Azure offerings.
 
+The reader should have a working familiarity with Azure and finding Azure documentation.
+
 It's expected that the reader is familiar with Node.js and Express.js middleware.  The write-up intermingles JavaScript code examples for middleware transformations where needed.  These transformations are abstracted by HTTP calls &mdash; I serve these with Azure Functions, but that's just for simplicity and ease.
 
 
@@ -59,14 +61,14 @@ Our demonstration of a request payload transform is to take the passed in `text/
 Our demo request will be a `POST` with a JWT that has a `name` property and a payload body of `The cake is a lie!`.
 
 ```
-curl -X POST -H "Content-Type: text/plain" -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c" --data  "The cake is a lie!" https://...
+curl -X POST -H "Content-Type: text/plain" -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c" --data  "The cake is a lie!" https://???
 ```
 
 
 
 This request will be transformed and be handled by our business-logic in our service.  I did not write a service for this demo.  We just use an echo from https://httpbin.org/anything.  The response will be whatever we pass into https://httpbin.org/anything.  Our expectation is to see the `X-Identity-Id` header with the value `John Doe` &mdash; which is the `name` attribute value in the bearer token above.  Our expectation is to see the original payload be reversed into `!eil a si ekac ehT`.
 
-The `https://...` in the above `curl` command stands in for your Azure Front Door hostname &mdash; replace this with your Azure Front Door hostname.
+The `https://???` in the above `curl` command stands in for your Azure Front Door hostname &mdash; replace this with your Azure Front Door hostname.
 
 
 
@@ -123,6 +125,14 @@ As such, in this write-up, the example that does not use Azure API Management al
 
 
 
+## Our Front Door Setup
+
+Out demo Azure Front Door setup is such that it tees API calls to `https://???.azure-api.net` to either our Azure API Management instance or our "codified forwarder" (Azure Function that does the API Management middleware functions for us).
+
+
+
+
+
 ## Front Door + API Management
 
 
@@ -134,6 +144,63 @@ As such, in this write-up, the example that does not use Azure API Management al
 Front Door globally load-balances across data-centers while API management orchestrates our API cross-cutting concerns.
 
 In this approach if we don't necessarily need geo-redundancy, but do want throttling, we can forego Azure Front Door and do everything with API Management.
+
+### Setting Up API Management
+
+We setup our demo API Management with a single operation, one that forwards requests to `https://httpbin.org/anything`.  We also turn off the subscription requirement:
+
+![image-20220529144034909](.\assets\image-20220529144034909.png)
+
+
+
+To do our custom [JWT processing](https://github.com/JakubNer/az-reverse-proxy-options/tree/master/jwt-terminate) and [payload re-write](https://github.com/JakubNer/az-reverse-proxy-options/tree/master/rewrite-body) &mdash; both of which we do by calling the respective custom Azure Functions from this here our Azure API Management &mdash; we replace the default empty API Management *policy* with one that calls said Azure Functions:
+
+![image-20220529145359532](.\assets\image-20220529145359532.png)
+
+
+
+Replace the above with:
+
+```
+<policies>
+    <inbound>
+        <base />
+        <send-request mode="new" response-variable-name="jwt-response" timeout="10" ignore-error="false">
+            <set-url>https://???.azurewebsites.net/api/jwt-terminate</set-url>
+            <set-method>POST</set-method>
+            <set-header name="Authorization" exists-action="override">
+                <value>@(context.Request.Headers.GetValueOrDefault("Authorization"))</value>
+            </set-header>
+        </send-request>
+        <set-header name="X-Identity-ID" exists-action="override">
+            <value>@(((IResponse)context.Variables["jwt-response"]).Body.As<String>())</value>
+        </set-header>
+        <send-request mode="new" response-variable-name="rewrite" timeout="10" ignore-error="false">
+            <set-url>https://???.azurewebsites.net/api/rewrite-body</set-url>
+            <set-method>POST</set-method>
+            <set-body>@{return context.Request.Body.As<string>();}</set-body>
+        </send-request>
+        <set-body>@{return ((IResponse)context.Variables["rewrite"]).Body.As<String>();}</set-body>
+    </inbound>
+    <backend>
+        <base />
+    </backend>
+    <outbound>
+        <base />
+    </outbound>
+    <on-error>
+        <base />
+    </on-error>
+</policies>
+```
+
+
+
+The above policy will call out [/jwt-terminate](https://github.com/JakubNer/az-reverse-proxy-options/tree/master/jwt-terminate) Azure Function, convert the response to the `X-Identity-ID` header.  Subsequently it calls the [/rewrite-body](https://github.com/JakubNer/az-reverse-proxy-options/tree/master/rewrite-body) Azure Function to reverse to request payload.  It processes the above policy in-line while handling the request, before forwarding the transformed payload to `https://httpbin.org/anything`; our "service".  
+
+The result is the expected echo response proving that we've setup our Azure API Management successfully:
+
+![image-20220529153841747](.\assets\image-20220529153841747.png)
 
 
 
