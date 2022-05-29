@@ -1,13 +1,22 @@
-# Azure Front Door versus Azure API Management versus Azure Gateway
+# Adding Flexibility to an API on Azure
 
 In this write-up we'll cover usage of several Azure offerings in implementing an HTTP API, whereby the API is:
 
 - geo-redundant for speed, availability, and safe-deployments
+- throttle-able &mdash; controlling costs
 - terminates a Json Web Token (JWT) on the perimeter &mdash; freeing trusted internal services from authorizations
 - provides a placeholder for request and response payload rewrites &mdash; an API contract façade
 - abstracts concrete service location via URL rewrites
 
-The intention is to show where these Azure offerings can be of help in saving us implementation time.
+In other words, the API is static to the outside but flexible with respect to implementation.
+
+The intention is to think through three Azure offerings and see how they can be of help in saving us implementation time:
+
+- Azure Front Door
+- Azure API Management
+- Azure Application Gateway
+
+
 
 Consider an incoming HTTP request to serve some business need.  We want the implementation of this business logic to benefit from of all of the above value propositions; which cross-cut our API surface, without coupling to our business-logic implementation.
 
@@ -30,6 +39,12 @@ Finally, we won't detail out actual JWT transformation and we do not have any bu
 
 
 
+
+## Our Request
+
+```
+curl -H "Authorization: Bearer your_token" http://localhost:7071/api/jwt-terminate
+```
 
 
 

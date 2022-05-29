@@ -6,6 +6,9 @@
     "start": "func start",
     "test": "echo \"No tests yet...\""
   },
-  "dependencies": {},
+  "dependencies": {
+    "azure-function-express": "2.0.0",
+    "jwt-decode": "3.1.2"
+  },
   "devDependencies": {}
 }
