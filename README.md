@@ -127,9 +127,34 @@ As such, in this write-up, the example that does not use Azure API Management al
 
 ## Our Front Door Setup
 
-Out demo Azure Front Door setup is such that it tees API calls to `https://???.azure-api.net` to either our Azure API Management instance or our "codified forwarder" (Azure Function that does the API Management middleware functions for us).
+Our demo Azure Front Door is setup with an "origin group" that splits request between our instance of API Management (next section) and our alternate route, the "codified forwarder" (two sections below).
+
+> Our "codified forwarder" is an Azure Function that does all the same orchestrations of our middleware transformations, just like we do with our API Management setup, but in lieu of leveraging (and paying for) API Management.
+>
+> Mind you, the flexibility of API Management is worth the cost. 
+
+Our demo Azure Front Door tees API calls to `https://???..azurefd.net` :
+
+- to either our Azure API Management instance 
+- or our "codified forwarder" (Azure Function that does the API Management middleware functions for us)
 
 
+
+![](./assets/frontdoor.png)
+
+
+
+The most interesting part of our demo Azure Front Door setup is the origin group configuration, that has both our API Management and "codified forwarder" in an "origin group".
+
+> ⚠ It's important to keep in mind that Azure Front Door origins are just host names: no paths.  All origins in a group must be able to consume the same paths and matching API contracts.  
+>
+> As such, our API Management consumes an API as `https://???.azure-api.net/api/forward`.
+>
+> Our "codified forwarder" Azure Function consumes the same API as `https://???.azurewebsites.net/api/forward`.
+
+Both are custom "origins" just configured with their respective HTTP  URLs.
+
+![image-20220529164957501](.\assets\image-20220529164957501.png)
 
 
 
@@ -147,7 +172,19 @@ In this approach if we don't necessarily need geo-redundancy, but do want thrott
 
 ### Setting Up API Management
 
-We setup our demo API Management with a single operation, one that forwards requests to `https://httpbin.org/anything`.  We also turn off the subscription requirement:
+We setup our demo API Management with a single operation, one that forwards all requests to `https://httpbin.org/anything`.  
+
+API Management is used to declaratively (XML) orchestrate some transformations on our requests before forwarding to the final business-logic service:
+
+1. deals with the JWT by extracting the `name` and setting it to the `X-Identity-Id` header
+2. reverses the payload
+3. forwards the result to a rewritten URL, namely https://httpbin.org/anything
+
+Our API Management setup does [1] and [2] by calling our very simple custom [JWT processing](https://github.com/JakubNer/az-reverse-proxy-options/tree/master/jwt-terminate) and [payload re-write](https://github.com/JakubNer/az-reverse-proxy-options/tree/master/rewrite-body) Azure Functions.  These are called before the final rewrite, as per [3].
+
+
+
+At the very start of setting up our API Management, right after initializing the resource (which took a very long time, be patient), we turn off the subscription requirement:
 
 ![image-20220529144034909](.\assets\image-20220529144034909.png)
 
@@ -212,9 +249,51 @@ The result is the expected echo response proving that we've setup our Azure API 
 
 
 
-In this approach we orchestrate API cross-cutting concerns with a middleware stack (express.js) before forwarding to internal trusted services.
+In this approach we orchestrate API cross-cutting concerns with [a single Azure Function]([az-reverse-proxy-options/jwt-terminate-rewrite-and-forward at master · JakubNer/az-reverse-proxy-options · GitHub](https://github.com/JakubNer/az-reverse-proxy-options/tree/master/jwt-terminate-rewrite-and-forward)) containing our middleware stack (express.js), before forwarding to the target business-logic service.
 
+This does exactly the same steps as API Management.  Although API Management is much nicer &mdash; a declarative orchestrations &mdash; this approach is much cheaper:  API Management is pricey.
 
+The Azure Function does the same things:
+
+- deals with the JWT by extracting the `name` and setting it to the `X-Identity-Id` header
+- reverses the payload
+- forwards the result to a rewritten URL, namely https://httpbin.org/anything
+
+To try and avoid having this be some dirty monolith, we wrap it with "express" to give it a semblance of being orchestrated.
+
+```
+// Let's do a permiter middleware stack using "express" before forwarding to internal services
+const app = express();
+
+// Deal with JWT
+app.use((req, res, next) => {
+    req.headers["X-Identity-Id"] = jwt_decode(/Bearer (.+)/.exec(req.headers.authorization)[1]).name;
+    delete req.headers.authorization;
+    delete req.headers.host;
+    next();
+})
+
+// Rewrite request payload
+app.use((req, res, next) => {
+    req.body = req.body.split("").reverse().join("");
+    next();
+})
+
+// Forward all requests to https://httpbin.org/anything
+app.post("*", async (req, res) => {
+    const response = await fetch('https://httpbin.org/anything', {
+        method: 'post',
+        body: req.body,
+        headers: req.headers
+    });
+  
+    res.send(await response.text())  
+});
+```
+
+See [the Azure Function](https://github.com/JakubNer/az-reverse-proxy-options/blob/master/jwt-terminate-rewrite-and-forward/index.js) for full code listing.
+
+The results from using this function are the same as using our API Management in the previous section.  As such, we're able to put it in the same origin group behind our demo API Front Door.
 
 
 
@@ -226,12 +305,12 @@ In this approach we orchestrate API cross-cutting concerns with a middleware sta
 
 
 
-Azure Gateway is a Layer-7 regional load-balancer that can accomplish some of what API Management does and helps us limit what we need to put into our Azure Function (codified forwarder).
+Azure Gateway is a Layer-7 regional load-balancer that can accomplish only a small subset of what API Management does.  We wanted to see if it can support our requirements.  Whether use of the Application gateway will help us limit what we need to put into our Azure Function ("codified forwarder" from previous section) &mdash; or perhaps eliminate it &mdash; but at a fraction of what API Management would cost.
 
-However, for the needs of our API that we set out at the beginning of this write-up, it's hard to justify using it.
+However, with reference to our API requirements that we set out at the beginning of this write-up, it's hard to justify using it.
 
-Azure Gateway has a robust URL rewrite and redirect support, but if we're already putting a middleware stack in front of it, it might not be justified.
+Azure Gateway has a robust URL rewrite and redirect support, but that's the only functionality it provides out of our list of requirements.  It does not help us terminate JWT in a custom way.  It does not rewrite payloads.  We would need to continue to put our "codified forwarder" middleware stack in front of it.  As such, it's use is not justified.
 
-Unfortunately Azure Gateway does not provide throttling, which necessitates the use of Front Door or adding persistence to our codified middleware (Azure function) &mdash; which we want to avoid.
+Furthermore, Azure Gateway does not provide throttling, which necessitates the use of Front Door or adding persistence to our codified middleware (Azure function) &mdash; which we want to avoid.
 
-Azure Gateway might be worthwhile if you want to leverage session affinity.  
+Azure Gateway might be worthwhile if you want to leverage session affinity.  It just doesn't fit the bill here.
