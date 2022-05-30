@@ -156,7 +156,7 @@ The most interesting part of our demo Azure Front Door setup is the origin group
 
 Both are custom "origins" just configured with their respective HTTP  URLs.
 
-![image-20220529164957501](.\assets\image-20220529164957501.png)
+![image-20220529164957501](./assets/image-20220529164957501.png)
 
 
 
