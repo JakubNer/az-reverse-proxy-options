@@ -243,9 +243,9 @@ The result is the expected echo response proving that we've setup our Azure API 
 
 
 
-> A very nice feature of Azure API Management is it's "Test" and "Trace" feature which allows debugging the various orchestrated steps with use-cases.
->
-> ![image-20220530073425468](./assets/image-20220530073425468.png)
+As a final note, a very nice feature of Azure API Management is it's "Test" and "Trace" feature which allows debugging the various orchestrated steps with use-cases.
+
+![image-20220530073425468](./assets/image-20220530073425468.png)
 
 
 
