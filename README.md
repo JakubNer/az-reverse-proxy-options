@@ -99,9 +99,9 @@ curl -X POST -H "Content-Type: text/plain" -H "Authorization: Bearer eyJhbGciOiJ
 
 ## Azure Offerings &mdash; Where We Embed API Cross-Cutting Concerns
 
-Azure Front Door is where we receive our requests at a global level and distribute downstream to regional data-centers for handling.  This allows our DNS to resolve to a data-center close to where the use is requesting from, or any data-center that's actually available:  hence geo-redundancy.  
+Azure Front Door is where we receive our requests at a global level and distribute downstream to regional data-centers for handling.  This allows our DNS to resolve to a data-center close to where the user is requesting from, or any data-center that's actually available:  hence geo-redundancy.  
 
-Azure Front Door also allows by-IP throttling right at the entry.  This is done with the help of it's Web Application Firewall.
+Azure Front Door also allows by-IP throttling right at the entry.  This is done with the help of its Web Application Firewall.
 
 Azure Front Door allows very simple origin and path prefix re-writes and, by itself, is not suitable for the custom URL / payload re-writes we need.
 
