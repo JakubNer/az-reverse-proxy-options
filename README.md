@@ -188,13 +188,13 @@ Our API Management setup does [1] and [2] by calling our very simple custom [JWT
 
 At the very start of setting up our API Management, right after initializing the resource (which took a very long time, be patient), we turn off the subscription requirement:
 
-![image-20220529144034909](.\assets\image-20220529144034909.png)
+![image-20220529144034909](./assets/image-20220529144034909.png)
 
 
 
 To do our custom [JWT processing](https://github.com/JakubNer/az-reverse-proxy-options/tree/master/jwt-terminate) and [payload re-write](https://github.com/JakubNer/az-reverse-proxy-options/tree/master/rewrite-body) &mdash; both of which we do by calling their respective custom Azure Functions from this here our Azure API Management &mdash; we replace the default empty API Management *policy* with one that calls said Azure Functions:
 
-![image-20220529145359532](.\assets\image-20220529145359532.png)
+![image-20220529145359532](./assets/image-20220529145359532.png)
 
 
 
@@ -239,13 +239,13 @@ The above policy will call out [/jwt-terminate](https://github.com/JakubNer/az-r
 
 The result is the expected echo response proving that we've setup our Azure API Management successfully:
 
-![image-20220529153841747](.\assets\image-20220529153841747.png)
+![image-20220529153841747](./assets/image-20220529153841747.png)
 
 
 
 > A very nice feature of Azure API Management is it's "Test" and "Trace" feature which allows debugging the various orchestrated steps with use-cases.
 >
-> ![image-20220530073425468](.\assets\image-20220530073425468.png)
+> ![image-20220530073425468](./assets/image-20220530073425468.png)
 
 
 
