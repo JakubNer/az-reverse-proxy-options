@@ -127,7 +127,9 @@ As such, in this write-up, the example that does not use Azure API Management al
 
 ## Our Front Door Setup
 
-In the usual case Azure Front Door load-balances requests to the closest data-center regionally.  However, it can also weighted-round-robin load-balance requests to whatever implementation of an API we configure it to.  
+In the usual case Azure Front Door load-balances requests to the closest data-center.  However, it can also weighted-round-robin load-balance requests to whatever implementation of an API we configure it to.  
+
+We leverage the latter.
 
 Our demo Azure Front Door is setup with an "origin group" that splits request between our instance of API Management (next section) and our alternate route, the "codified forwarder" (two sections below).
 
