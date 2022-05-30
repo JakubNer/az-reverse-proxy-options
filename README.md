@@ -148,18 +148,18 @@ Our demo Azure Front Door tees API calls against `https://???..azurefd.net` :
 
 
 
-The most interesting part of our demo Azure Front Door setup is the origin group configuration, that has both our API Management and "codified forwarder", equally weighted, in an "origin group".
+The most interesting part of our demo Azure Front Door setup is the "origin group" configuration where we have both, our API Management, and "codified forwarder", equally weighted.  
+
+Both are custom "origins" just configured with their respective HTTP  URLs.
+
+![image-20220529164957501](./assets/image-20220529164957501.png)
+
 
 > ⚠ It's important to keep in mind that Azure Front Door origins are just host names: no paths.  All origins in a group must be able to consume the same paths and matching API contracts.  
 >
 > As such, our API Management consumes our demo API as `https://???.azure-api.net/api/forward`.
 >
 > Our "codified forwarder" Azure Function consumes the same API contract as `https://???.azurewebsites.net/api/forward`.
-
-Both are custom "origins" just configured with their respective HTTP  URLs.
-
-![image-20220529164957501](./assets/image-20220529164957501.png)
-
 
 
 ## Front Door + API Management
@@ -172,7 +172,7 @@ Both are custom "origins" just configured with their respective HTTP  URLs.
 
 Front Door globally load-balances across data-centers while API management orchestrates our API cross-cutting concerns.
 
-In this approach if we don't necessarily need geo-redundancy, but do want throttling, we can forego Azure Front Door and do everything with API Management.
+Both offerings can throttle; if we don't necessarily need geo-redundancy, but still want throttling, we can forego Azure Front Door and do everything with API Management.
 
 ### Setting Up API Management
 
