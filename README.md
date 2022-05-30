@@ -261,7 +261,7 @@ As a final note, a very nice feature of Azure API Management is it's "Test" and 
 
 In this approach we orchestrate API cross-cutting concerns with [a single Azure Function](https://github.com/JakubNer/az-reverse-proxy-options/tree/master/jwt-terminate-rewrite-and-forward) containing our middleware stack (express.js), before forwarding to the target business-logic service.
 
-This does exactly the same steps as API Management.  Although API Management is much nicer &mdash; with its declarative orchestrations &mdash; this approach is much cheaper:  API Management is pricey.
+This function does exactly the same steps as our API Management configuration from the previous section.  Although API Management is much nicer &mdash; with its declarative orchestrations &mdash; this approach is much cheaper:  API Management is pricey.
 
 The Azure Function does the same things:
 
